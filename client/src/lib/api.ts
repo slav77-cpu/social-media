@@ -73,6 +73,27 @@ export interface Author {
 
 export type Visibility = "PUBLIC" | "FOLLOWERS";
 
+export interface UserSummary {
+  id: string;
+  username: string;
+  avatarUrl: string | null;
+  bio?: string | null;
+}
+
+export type NotificationType = "LIKE" | "COMMENT" | "FOLLOW";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  actorId: string;
+  actorName: string;
+  actorAvatar: string | null;
+  postId: string | null;
+  excerpt: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface Comment {
   authorId: string;
   authorName: string;

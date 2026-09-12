@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useHideOnScroll } from "../hooks/useHideOnScroll";
+import { useUnreadCount } from "../hooks/useUnreadCount";
 import Avatar from "./Avatar";
 import PulseIcon from "./PulseIcon";
 
@@ -13,6 +14,7 @@ function BottomNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const hidden = useHideOnScroll();
+  const unread = useUnreadCount(!!user && pathname !== "/notifications");
 
   if (!user) return null;
 
@@ -37,6 +39,15 @@ function BottomNav() {
       >
         <Avatar username={user.username} url={user.avatarUrl} size={22} />
         <span className="bn-label">Профил</span>
+      </Link>
+
+      <Link
+        to="/notifications"
+        className={`bn-bell ${isActive("/notifications") ? "active" : ""}`}
+      >
+        <span className="bn-icon">🔔</span>
+        {unread > 0 && <span className="badge">{unread > 9 ? "9+" : unread}</span>}
+        <span className="bn-label">Известия</span>
       </Link>
 
       <Link to="/settings" className={isActive("/settings") ? "active" : ""}>

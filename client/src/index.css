@@ -299,6 +299,119 @@ button.link:hover:not(:disabled) { filter: none; text-decoration: underline; box
 .comments li:hover .comment-del { opacity: 1; }
 .comment-del:hover { color: var(--danger); box-shadow: none; filter: none; }
 
+/* ---------- tursene ---------- */
+
+.search { position: relative; flex: 1; max-width: 280px; }
+
+.search input {
+  background: #1a1e26;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: .9rem;
+}
+
+.search-pop {
+  position: absolute;
+  top: 115%;
+  left: 0;
+  right: 0;
+  z-index: 120;
+  background: #1c2029;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .5);
+  animation: pop .12s ease both;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.search-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.search-item:hover { background: #262b35; }
+
+.search-item-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.search-item-text .muted {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: .8rem;
+}
+
+/* ---------- izvestiya ---------- */
+
+.bell { position: relative; }
+.bell:hover { transform: none; }
+
+.badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+  font-size: .65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pop .2s ease both;
+}
+
+.notif-list { list-style: none; }
+
+/* celiyat red e <a>, zatova mu vrushtame cveta i mahame podchertavaneto */
+.notif {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease, background .15s ease;
+}
+
+.notif:hover {
+  border-color: var(--accent);
+  background: #1b1f28;
+  transform: translateY(-1px);
+}
+
+.notif-item.is-new .notif { border-left: 3px solid var(--accent); }
+.notif-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+/* strelkata nadyasno — vizualen namek, che redut se cuka */
+.notif-chevron {
+  margin-left: auto;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.back-btn { margin-bottom: 12px; }
+
+.bn-bell { position: relative; }
+.bn-bell .badge { top: 0; right: 22%; }
+
 /* ---------- dolen nav bar (samo na telefon) ---------- */
 
 .bottom-nav {
@@ -358,6 +471,9 @@ button.link:hover:not(:disabled) { filter: none; text-decoration: underline; box
   .me-link,
   .icon-btn,
   .topbar .row { display: none; }
+
+  /* tursachkata ostava — tya e glavnoto gore na telefon */
+  .search { max-width: none; }
 
   .card { padding: 13px; border-radius: 12px; }
 
