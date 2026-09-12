@@ -19,6 +19,44 @@ export interface Moderation {
 }
 
 /**
+ * Gleda snimka i predlaga opisanie + hashtagove.
+ * Snimkata putuva kum modela kato base64 v "inlineData".
+ */
+export async function suggestCaption(
+  imageBase64: string,
+  mimeType: string
+): Promise<{ caption: string; hashtags: string[] }> {
+  const prompt = `Ти си автор в българска социална мрежа за автомобили.
+Виж снимката и напиши:
+1. Кратко описание на български (едно изречение, живо и естествено, без клишета).
+2. До 5 подходящи хаштага на латиница, без решетка.
+
+Ако на снимката няма автомобил, опиши каквото виждаш.
+Отговори само с JSON: {"caption": "...", "hashtags": ["...", "..."]}`;
+
+  const response = await getClient().models.generateContent({
+    model: MODEL,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType, data: imageBase64 } },
+        ],
+      },
+    ],
+  });
+
+  const raw = (response.text ?? "").trim().replace(/```json|```/g, "").trim();
+  const parsed = JSON.parse(raw) as { caption?: string; hashtags?: string[] };
+
+  return {
+    caption: parsed.caption ?? "",
+    hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 5) : [],
+  };
+}
+
+/**
  * Pita AI dali komentarut e podhodyasht.
  *
  * VAJNO: ako AI-yat ne otgovori (padnal, bavi, izcherpan limit),

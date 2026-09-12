@@ -6,6 +6,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": "http://localhost:3000",
+      // kachenite snimki se servirat ot survura, ne ot Vite
+      "/uploads": "http://localhost:3000",
     },
   },
 });

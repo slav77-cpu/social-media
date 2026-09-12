@@ -39,6 +39,26 @@ export const api = {
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+
+  // Kachvane na fail: tyaloto e FormData, NE JSON.
+  // Zatova ne minavame prez request() — tam Content-Type e zakovan.
+  async upload(file: File): Promise<{ url: string }> {
+    const form = new FormData();
+    form.append("image", file);
+
+    const token = tokenStore.get();
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      // vnimanie: TUK NE slagame Content-Type —
+      // brauzurut go slaga sam, zaedno s boundary-to na formata
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any).error || "Качването се провали");
+    return data as { url: string };
+  },
 };
 
 // --- tipove, ogledalo na tova, koeto survurut vrushta ---

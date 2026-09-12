@@ -3,3 +3,12 @@ node_modules
 .env
 
 /generated/prisma
+
+# kachenite ot potrebiteli snimki — ne vlizat v git
+uploads/
+
+# dokumentaciya, koyato Prisma CLI slaga za AI asistenti
+.agents/
+.claude/
+.windsurf/
+skills-lock.json
