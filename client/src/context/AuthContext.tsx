@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  setUser: (user: Author) => void;   // sled redakciya na profila
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -48,8 +49,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  // polzva se ot stranicata "Nastroyki": obnovyava i ekrana, i localStorage
+  function updateUser(next: Author) {
+    localStorage.setItem(USER_KEY, JSON.stringify(next));
+    setUser(next);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, login, register, logout, setUser: updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

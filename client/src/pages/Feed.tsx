@@ -1,47 +1,91 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { api } from "../lib/api";
-import type { Post } from "../lib/api";
+import type { Post, Visibility } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import PostCard from "../components/PostCard";
+import Avatar from "../components/Avatar";
+
+const PAGE = 10; // kolko posta se durpat na edna partida
 
 function Feed() {
   const { user } = useAuth();
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState("");
 
   const [caption, setCaption] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState("");   // lokalen URL, samo za pokazvane
-  const [uploadedUrl, setUploadedUrl] = useState(""); // adresut sled kachvane
+  const [preview, setPreview] = useState("");
+  const [uploadedUrl, setUploadedUrl] = useState("");
+  const [visibility, setVisibility] = useState<Visibility>("PUBLIC");
   const [posting, setPosting] = useState(false);
-  const [thinking, setThinking] = useState(false);    // AI-yat opisva snimkata
+  const [thinking, setThinking] = useState(false);
 
-  // "all" = vsichki postove, "following" = samo ot horata, koito sledvam
   const [tab, setTab] = useState<"all" | "following">("all");
 
+  // elementut-"strazh" nay-dolu: kogato vleze v ekrana, teglim oshte
+  const sentinel = useRef<HTMLDivElement>(null);
+
+  const path = tab === "following" ? "/posts?following=true" : "/posts";
+
+  // purva partida (i pri smyana na tab)
   useEffect(() => {
     setLoading(true);
     setError("");
-    const path = tab === "following" ? "/posts?following=true" : "/posts";
+    setHasMore(true);
     api
-      .get<Post[]>(path)
-      .then(setPosts)
+      .get<Post[]>(`${path}${path.includes("?") ? "&" : "?"}take=${PAGE}&skip=0`)
+      .then((data) => {
+        setPosts(data);
+        setHasMore(data.length === PAGE);
+      })
       .catch((err) => setError((err as Error).message))
       .finally(() => setLoading(false));
   }, [tab]);
 
+  // sledvashtite partidi
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || loading) return;
+    setLoadingMore(true);
+    try {
+      const more = await api.get<Post[]>(
+        `${path}${path.includes("?") ? "&" : "?"}take=${PAGE}&skip=${posts.length}`
+      );
+      setPosts((prev) => [...prev, ...more]);
+      setHasMore(more.length === PAGE);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, loading, path, posts.length]);
+
+  // IntersectionObserver: brauzurut ni kazva kogato "strazhut" se pokaje
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { rootMargin: "300px" } // zapochvame da teglim malko predi da e stignal
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect(); // pochistvane, kato komponentut izchezne
+  }, [loadMore]);
+
   function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const chosen = e.target.files?.[0] ?? null;
     setFile(chosen);
-    setUploadedUrl(""); // nova snimka → starото kachvane ne vaji
-    // URL.createObjectURL pravi vremenen lokalen adres kum faila,
-    // za da vidi potrebitelyat snimkata predi izprashtane
+    setUploadedUrl("");
     setPreview(chosen ? URL.createObjectURL(chosen) : "");
   }
 
-  // kachva faila samo pri purva nujda i pomni adresa
   async function ensureUploaded(): Promise<string | null> {
     if (!file) return null;
     if (uploadedUrl) return uploadedUrl;
@@ -76,13 +120,13 @@ function Feed() {
     setPosting(true);
     try {
       const imageUrl = await ensureUploaded();
-
-      const created = await api.post<Post>("/posts", { caption, imageUrl });
-      setPosts([created, ...posts]);   // nov post otgore, bez da durpame vsichko nanovo
+      const created = await api.post<Post>("/posts", { caption, imageUrl, visibility });
+      setPosts([created, ...posts]);
       setCaption("");
       setFile(null);
       setPreview("");
       setUploadedUrl("");
+      setVisibility("PUBLIC");
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -90,7 +134,6 @@ function Feed() {
     }
   }
 
-  // podmenya edin post v spisuka (sled layk ili komentar)
   function replacePost(updated: Post) {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   }
@@ -102,39 +145,58 @@ function Feed() {
   return (
     <div className="page">
       {user && (
-        <form onSubmit={createPost} className="card stack">
-          <textarea
-            placeholder="Какво ново?"
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            rows={3}
-          />
-          <input type="file" accept="image/*" onChange={pickFile} />
+        <form onSubmit={createPost} className="card stack composer">
+          <div className="row">
+            <Avatar username={user.username} url={user.avatarUrl} size={38} />
+            <textarea
+              placeholder={`Какво ново, ${user.username}?`}
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              rows={3}
+            />
+          </div>
 
           {preview && <img src={preview} alt="" className="post-img" />}
 
-          {file && (
-            <button type="button" className="link" onClick={askAI} disabled={thinking}>
-              {thinking ? "AI гледа снимката…" : "✨ Предложи описание с AI"}
-            </button>
-          )}
+          <div className="row composer-actions">
+            <label className="file-label">
+              📷 Снимка
+              <input type="file" accept="image/*" onChange={pickFile} hidden />
+            </label>
 
-          <button type="submit" disabled={posting || caption.trim().length < 2}>
-            {posting ? "Публикува се…" : "Публикувай"}
-          </button>
+            {file && (
+              <button type="button" className="btn-link" onClick={askAI} disabled={thinking}>
+                {thinking ? "AI гледа…" : "✨ AI описание"}
+              </button>
+            )}
+
+            <select
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value as Visibility)}
+              className="select"
+            >
+              <option value="PUBLIC">🌍 Публично</option>
+              <option value="FOLLOWERS">🔒 Само последователи</option>
+            </select>
+
+            <button
+              type="submit"
+              disabled={posting || caption.trim().length < 2}
+              style={{ marginLeft: "auto" }}
+            >
+              {posting ? "Публикува се…" : "Публикувай"}
+            </button>
+          </div>
         </form>
       )}
 
       {user && (
-        <div className="row">
-          <button
-            className={tab === "all" ? "" : "link"}
-            onClick={() => setTab("all")}
-          >
+        <div className="row tabs">
+          <button className={tab === "all" ? "" : "btn-ghost"} onClick={() => setTab("all")}>
             Всички
           </button>
           <button
-            className={tab === "following" ? "" : "link"}
+            className={tab === "following" ? "" : "btn-ghost"}
             onClick={() => setTab("following")}
           >
             Следвани
@@ -145,13 +207,34 @@ function Feed() {
       {error && <p className="error">{error}</p>}
 
       {loading ? (
-        <p>Зареждане…</p>
+        <>
+          <div className="card">
+            <div className="skeleton line" style={{ width: "40%" }} />
+            <div className="skeleton block" />
+          </div>
+          <div className="card">
+            <div className="skeleton line" style={{ width: "55%" }} />
+            <div className="skeleton block" />
+          </div>
+        </>
       ) : posts.length === 0 ? (
-        <p>Още няма постове.</p>
+        <p className="muted">
+          {tab === "following"
+            ? "Никой от хората, които следваш, още не е публикувал."
+            : "Още няма публикации."}
+        </p>
       ) : (
         posts.map((p) => (
           <PostCard key={p.id} post={p} onChange={replacePost} onDelete={removePost} />
         ))
+      )}
+
+      {/* strazhut: nevidim element, koyto zadeystva dozarejdaneto */}
+      <div ref={sentinel} />
+
+      {loadingMore && <p className="muted center">Зарежда още…</p>}
+      {!hasMore && posts.length > 0 && (
+        <p className="muted center">Това е всичко засега 🎉</p>
       )}
     </div>
   );

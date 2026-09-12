@@ -32,37 +32,54 @@ function Login() {
   }
 
   return (
-    <div className="page narrow">
-      <h1>{mode === "login" ? "Вход" : "Регистрация"}</h1>
+    <div className="page narrow auth-page">
+      <div className="auth-logo">Pulse</div>
+      <p className="muted center" style={{ marginBottom: 22 }}>
+        {mode === "login"
+          ? "Влез, за да видиш какво ново."
+          : "Създай профил за минута."}
+      </p>
 
-      <form onSubmit={handleSubmit} className="stack">
-        <input
-          placeholder="Потребителско име"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Парола"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+      <form onSubmit={handleSubmit} className="card stack">
+        <label className="field-label">
+          Потребителско име
+          <input
+            placeholder="ivan"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoFocus
+          />
+        </label>
+
+        <label className="field-label">
+          Парола
+          <input
+            type="password"
+            placeholder="••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+
         <button type="submit" disabled={busy || !username || !password}>
-          {busy ? "Моля, изчакай…" : mode === "login" ? "Влез" : "Регистрирай се"}
+          {busy ? "Моля, изчакай…" : mode === "login" ? "Влез" : "Създай профил"}
         </button>
+
+        {error && <p className="error">{error}</p>}
       </form>
 
-      {error && <p className="error">{error}</p>}
-
-      <button
-        className="link"
-        onClick={() => {
-          setMode(mode === "login" ? "register" : "login");
-          setError("");
-        }}
-      >
-        {mode === "login" ? "Нямаш акаунт? Регистрирай се" : "Имаш акаунт? Влез"}
-      </button>
+      <p className="center muted switch-mode">
+        {mode === "login" ? "Нямаш акаунт?" : "Вече имаш акаунт?"}{" "}
+        <button
+          className="link"
+          onClick={() => {
+            setMode(mode === "login" ? "register" : "login");
+            setError("");
+          }}
+        >
+          {mode === "login" ? "Регистрирай се" : "Влез"}
+        </button>
+      </p>
     </div>
   );
 }

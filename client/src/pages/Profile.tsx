@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { api } from "../lib/api";
 import type { Post } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import PostCard from "../components/PostCard";
+import Avatar from "../components/Avatar";
 
 interface ProfileUser {
   id: string;
   username: string;
   bio: string | null;
+  avatarUrl: string | null;
   createdAt: string;
   followersCount: number;
   followingCount: number;
@@ -35,11 +37,11 @@ function Profile() {
 
   useEffect(() => {
     setLoading(true);
+    setError("");
     api
       .get<ProfileResponse>(`/users/${username}`)
       .then(async (profile) => {
         setData(profile);
-        // sledvam li go veche? pitame "/users/me" samo ako sme lognati
         if (me) {
           const mine = await api.get<Me>("/users/me");
           setFollowing(mine.following.includes(profile.user.id));
@@ -57,7 +59,6 @@ function Profile() {
         `/users/${data.user.id}/follow`
       );
       setFollowing(result.following);
-      // broyachut se promenya vednaga na ekrana (optimistichno)
       setData({
         ...data,
         user: {
@@ -83,31 +84,81 @@ function Profile() {
     setData({ ...data, posts: data.posts.filter((p) => p.id !== id) });
   }
 
-  if (loading) return <div className="page"><p>Зареждане…</p></div>;
+  if (loading) {
+    // skeleton — sivi pravоъгълnici na myastoto na sudurjanieto,
+    // za da ne "skacha" stranicata, kogato dannite pristignat
+    return (
+      <div className="page">
+        <div className="card skeleton-card">
+          <div className="skeleton circle" />
+          <div className="stack" style={{ flex: 1 }}>
+            <div className="skeleton line" style={{ width: "45%" }} />
+            <div className="skeleton line" style={{ width: "70%" }} />
+          </div>
+        </div>
+        <div className="card">
+          <div className="skeleton line" style={{ width: "60%" }} />
+          <div className="skeleton block" />
+        </div>
+      </div>
+    );
+  }
+
   if (error) return <div className="page"><p className="error">{error}</p></div>;
   if (!data) return null;
 
   const isMe = me?.id === data.user.id;
+  const joined = new Date(data.user.createdAt).toLocaleDateString("bg-BG", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="page">
-      <div className="card">
-        <h1>@{data.user.username}</h1>
-        {data.user.bio && <p>{data.user.bio}</p>}
-        <p className="muted">
-          {data.user.followersCount} последователи · {data.user.followingCount} следва ·{" "}
-          {data.posts.length} поста
-        </p>
+      <section className="card profile-head">
+        <Avatar username={data.user.username} url={data.user.avatarUrl} size={84} />
 
-        {me && !isMe && (
-          <button onClick={toggleFollow} style={{ marginTop: 10 }}>
-            {following ? "Спри да следваш" : "Следвай"}
-          </button>
-        )}
-      </div>
+        <div className="profile-info">
+          <h1>{data.user.username}</h1>
+          {data.user.bio && <p className="profile-bio">{data.user.bio}</p>}
+
+          <div className="row stats">
+            <span>
+              <strong>{data.posts.length}</strong> <span className="muted">публикации</span>
+            </span>
+            <span>
+              <strong>{data.user.followersCount}</strong>{" "}
+              <span className="muted">последователи</span>
+            </span>
+            <span>
+              <strong>{data.user.followingCount}</strong> <span className="muted">следва</span>
+            </span>
+          </div>
+
+          <span className="muted">В Pulse от {joined}</span>
+
+          <div className="row" style={{ marginTop: 12 }}>
+            {isMe ? (
+              <Link to="/settings" className="btn-link">
+                Редактирай профила
+              </Link>
+            ) : (
+              me && (
+                <button onClick={toggleFollow} className={following ? "btn-ghost" : ""}>
+                  {following ? "Следваш" : "Следвай"}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+      </section>
+
+      <h2 className="wall-title">Стена</h2>
 
       {data.posts.length === 0 ? (
-        <p>Още няма постове.</p>
+        <p className="muted">
+          {isMe ? "Още нямаш публикации. Напиши първата си!" : "Още няма публикации."}
+        </p>
       ) : (
         data.posts.map((p) => (
           <PostCard key={p.id} post={p} onChange={replacePost} onDelete={removePost} />

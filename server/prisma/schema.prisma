@@ -11,6 +11,7 @@ model User {
   username     String   @unique
   passwordHash String
   bio          String?
+  avatarUrl    String?
   createdAt    DateTime @default(now())
   posts        Post[]
   following    String[] @default([]) @db.ObjectId
@@ -18,14 +19,21 @@ model User {
 }
 
 model Post {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  caption   String
-  imageUrl  String?
-  authorId  String    @db.ObjectId
-  author    User      @relation(fields: [authorId], references: [id])
-  comments  Comment[]
-  likedBy   String[]  @db.ObjectId
-  createdAt DateTime  @default(now())
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  caption    String
+  imageUrl   String?
+  authorId   String     @db.ObjectId
+  author     User       @relation(fields: [authorId], references: [id])
+  comments   Comment[]
+  likedBy    String[]   @db.ObjectId
+  visibility Visibility @default(PUBLIC)
+  editedAt   DateTime?
+  createdAt  DateTime   @default(now())
+}
+
+enum Visibility {
+  PUBLIC     // vijda go vseki
+  FOLLOWERS  // samo horata, koito sledvat avtora
 }
 
 type Comment {
