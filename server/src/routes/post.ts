@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { requireAuth } from "../middlewares/auth";
 import { optionalAuth } from "../middlewares/optionalAuth";
 import { moderateComment } from "../lib/ai";
+import { notify } from "../lib/notify";
 
 const router = Router();
 
@@ -53,8 +54,8 @@ router.get("/", optionalAuth, async (req, res) => {
   res.json(posts);
 });
 
-// GET /api/posts/:id
-router.get("/:id", async (req, res) => {
+// GET /api/posts/:id — edin post (izvestiyata vodyat tuk)
+router.get("/:id", optionalAuth, async (req, res) => {
   const id = String(req.params.id);
 
   const post = await prisma.post.findUnique({
@@ -62,6 +63,20 @@ router.get("/:id", async (req, res) => {
     include: { author: authorSelect },
   });
   if (!post) return res.status(404).json({ error: "Няма такъв пост" });
+
+  // Sushtata proverka kato vuv feed-a, no za edin post.
+  // Bez neya FOLLOWERS post bi se vidyal ot vseki, koyto znae ID-to.
+  if (post.visibility === Visibility.FOLLOWERS) {
+    const me = req.userId
+      ? await prisma.user.findUnique({ where: { id: req.userId } })
+      : null;
+
+    const allowed =
+      me && (me.id === post.authorId || me.following.includes(post.authorId));
+
+    if (!allowed) return res.status(404).json({ error: "Няма такъв пост" });
+  }
+
   res.json(post);
 });
 
@@ -85,6 +100,7 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 // PATCH /api/posts/:id — redakciya (samo avtorut)
+
 router.patch("/:id", requireAuth, async (req, res) => {
   const id = String(req.params.id);
   const { caption, visibility } = req.body;
@@ -156,6 +172,15 @@ router.post("/:id/comments", requireAuth, async (req, res) => {
     },
     include: { author: authorSelect },
   });
+
+  await notify({
+    userId: post.authorId,
+    actorId: req.userId!,
+    type: "COMMENT",
+    postId: post.id,
+    excerpt: text.trim(),
+  });
+
   res.status(201).json(post);
 });
 
@@ -208,6 +233,17 @@ router.post("/:id/like", requireAuth, async (req, res) => {
     data: { likedBy },
     include: { author: authorSelect },
   });
+
+  // uvedomyavame samo pri NOV layk, ne pri mahane
+  if (!liked) {
+    await notify({
+      userId: post.authorId,
+      actorId: userId,
+      type: "LIKE",
+      postId: post.id,
+    });
+  }
+
   res.json(updated);
 });
 

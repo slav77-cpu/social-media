@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../db";
 import { requireAuth } from "../middlewares/auth";
 import { optionalAuth } from "../middlewares/optionalAuth";
+import { notify } from "../lib/notify";
 
 const router = Router();
 
@@ -64,6 +65,23 @@ router.patch("/me", requireAuth, async (req, res) => {
     }
     throw err;
   }
+});
+
+// GET /api/users/search?q=iva — tursene na hora
+// VAJNO: stoi PREDI "/:username", inache "search" shte se prieme
+// za potrebitelsko ime (pomnish li /cars/new vs /cars/:id?)
+router.get("/search", async (req, res) => {
+  const q = String(req.query.q ?? "").trim();
+  if (q.length < 2) return res.json([]);
+
+  const users = await prisma.user.findMany({
+    where: { username: { contains: q, mode: "insensitive" } },
+    select: { id: true, username: true, avatarUrl: true, bio: true },
+    orderBy: { username: "asc" },
+    take: 10,
+  });
+
+  res.json(users);
 });
 
 // GET /api/users/:username — profil + postovete mu
@@ -147,6 +165,10 @@ router.post("/:id/follow", requireAuth, async (req, res) => {
       },
     }),
   ]);
+
+  if (!isFollowing) {
+    await notify({ userId: targetId, actorId: myId, type: "FOLLOW" });
+  }
 
   res.json({ following: !isFollowing });
 });

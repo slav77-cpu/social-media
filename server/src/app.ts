@@ -6,6 +6,7 @@ import postsRouter from "./routes/post";
 import usersRouter from "./routes/user";
 import uploadRouter from "./routes/upload";
 import aiRouter from "./routes/ai";
+import notificationsRouter from "./routes/notification";
 
 // Tuk SAMO stroim prilojenieto. Ne go puskame na port —
 // taka testovete mogat da go polzvat bez da vdigat istinski survur.
@@ -17,6 +18,7 @@ app.use("/api/posts", postsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/ai", aiRouter);
+app.use("/api/notifications", notificationsRouter);
 
 // kachenite snimki se servirat kato statichni faylove
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));

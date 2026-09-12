@@ -36,6 +36,27 @@ enum Visibility {
   FOLLOWERS  // samo horata, koito sledvat avtora
 }
 
+model Notification {
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String           @db.ObjectId // poluchatelyat
+  type        NotificationType
+  actorId     String           @db.ObjectId // koy e izvurshil deystvieto
+  actorName   String                        // dublirame imeto i snimkata,
+  actorAvatar String?                       // za da ne durpame potrebitelya pri vseki red
+  postId      String?          @db.ObjectId
+  excerpt     String?                       // otkus ot komentara
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, createdAt])
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT
+  FOLLOW
+}
+
 type Comment {
   authorId   String   @db.ObjectId
   authorName String

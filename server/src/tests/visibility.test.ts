@@ -81,6 +81,46 @@ describe("видимост на постовете", () => {
   });
 });
 
+describe("GET /api/posts/:id", () => {
+  it("публичен пост се вижда от всеки", async () => {
+    const ivan = await makeUser("ivan");
+    const post = await postAs(ivan.token, "Публичен пост");
+
+    const res = await request(app).get(`/api/posts/${post.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.caption).toBe("Публичен пост");
+  });
+
+  it("FOLLOWERS пост е скрит от непознат, дори когато знае ID-то", async () => {
+    const ivan = await makeUser("ivan");
+    const petar = await makeUser("petar");
+    const post = await postAs(ivan.token, "Скрит пост", "FOLLOWERS");
+
+    const res = await request(app)
+      .get(`/api/posts/${post.id}`)
+      .set("Authorization", `Bearer ${petar.token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("последовател отваря FOLLOWERS поста от известието", async () => {
+    const ivan = await makeUser("ivan");
+    const petar = await makeUser("petar");
+    const post = await postAs(ivan.token, "Скрит пост", "FOLLOWERS");
+
+    await request(app)
+      .post(`/api/users/${ivan.id}/follow`)
+      .set("Authorization", `Bearer ${petar.token}`);
+
+    const res = await request(app)
+      .get(`/api/posts/${post.id}`)
+      .set("Authorization", `Bearer ${petar.token}`);
+
+    expect(res.status).toBe(200);
+  });
+});
+
 describe("PATCH /api/posts/:id", () => {
   it("авторът редактира описанието", async () => {
     const ivan = await makeUser("ivan");
